@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36301.6 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealTimeIo", "RealTimeIo\RealTimeIo.csproj", "{A1E398A8-3ABB-4B10-B328-B75C4923EA80}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealtimeIo.Tests", "RealtimeIo.Tests\RealtimeIo.Tests.csproj", "{21783544-F7BF-4323-8760-24C4A654167B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1E398A8-3ABB-4B10-B328-B75C4923EA80}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1E398A8-3ABB-4B10-B328-B75C4923EA80}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1E398A8-3ABB-4B10-B328-B75C4923EA80}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1E398A8-3ABB-4B10-B328-B75C4923EA80}.Release|Any CPU.Build.0 = Release|Any CPU
+		{21783544-F7BF-4323-8760-24C4A654167B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{21783544-F7BF-4323-8760-24C4A654167B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{21783544-F7BF-4323-8760-24C4A654167B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{21783544-F7BF-4323-8760-24C4A654167B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {BF9F2BE8-1B2D-41E3-8036-A94710A0141C}
+	EndGlobalSection
+EndGlobal
