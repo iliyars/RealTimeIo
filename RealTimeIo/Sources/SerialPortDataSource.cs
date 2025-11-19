@@ -7,6 +7,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.IO.Ports;
 using System.Runtime.InteropServices;
+using System.Buffers;
 
 namespace RealTimeIo.Sources
 {
@@ -18,9 +19,7 @@ namespace RealTimeIo.Sources
         private readonly CancellationTokenSource _cts = new();
         private Task? _readTask;
 
-
         public ChannelReader<byte[]> Bloks => _channel.Reader;
-
 
         public SerialPortDataSource(SerialPort port, int bufferSize = 256, int channelCapacity = 64)
         {
@@ -35,20 +34,32 @@ namespace RealTimeIo.Sources
             });
         }
 
-
-
-
-
         public async ValueTask DisposeAsync()
         {
-            _cts.Cancel();
+            try
+            {
+                _cts.Cancel();
             if (_readTask != null)
                 await _readTask;
 
             if (_port.IsOpen)
-                _port.Close();
-
-            _cts.Dispose();
+                try
+                {
+                    _port.Close();        
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"Ошибка закрытия порта: {ex.Message}");        
+                }
+            }catch(Exception ex)
+            {
+                Console.Error.WriteLine($"Ошибка при закрытии порта: {ex.Message}");
+            }
+            finally
+            {
+                _cts.Dispose();
+            }
+            
         }
 
         public void Start()
@@ -71,27 +82,42 @@ namespace RealTimeIo.Sources
             {
                 while(!token.IsCancellationRequested)
                 {
-                    var buffer = new byte[_bufferSize];
-                    int read = await stream.ReadAsync(buffer.AsMemory(0, _bufferSize), token);
-
-                    if (read <= 0)
-                        continue;
-
-                    if(read < _bufferSize)
+                    var buffer = ArrayPool<byte>.Shared.Rent(_bufferSize);
+                    try
                     {
-                        var trimed = new byte[read];
-                        Array.Copy(buffer, trimed, read);
-                        buffer = trimed;
+                        int read = await stream.ReadAsync(buffer.AsMemory(0, _bufferSize), token);
+                        if(read <= 0)
+                            break;
+
+                        if(read < _bufferSize)
+                        {
+                                // Обрезаем существующий буфер
+                            var trimmed = new byte[read];
+                            Array.Copy(buffer, trimmed, read);
+                            buffer = trimmed;
+                        }
+
+                        if(!await _channel.Writer.WaitToWriteAsync(token))
+                            break;
+
+                        await _channel.Writer.WriteAsync(buffer, token);
                     }
-
-                    if (!await _channel.Writer.WaitToWriteAsync(token))
-                        break;
-
-                    await _channel.Writer.WriteAsync(buffer, token);
+                    catch(Exception ex)
+                    {
+                        Console.Error.WriteLine($"Ошибка чтения из порта: {ex.Message}");
+                        ArrayPool<byte>.Shared.Return(buffer);
+                        throw;
+                    }
+                    finally
+                    {
+                        if(buffer is byte[] rentedBuffer && rentedBuffer.Length == _bufferSize)
+                            ArrayPool<byte>.Shared.Return(rentedBuffer);
+                    }
                 }
-            }catch(OperationCanceledException) 
+            }
+            catch(OperationCanceledException)
             {
-
+                
             }
             finally
             {

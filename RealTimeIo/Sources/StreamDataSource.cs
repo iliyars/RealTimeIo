@@ -1,6 +1,8 @@
 ﻿using RealTimeIo.Core;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Channels;
@@ -33,7 +35,7 @@ namespace RealTimeIo.Sources
 
         public void Start()
         {
-            if (_readTask == null)
+            if (_readTask != null)
             {
                 throw new InvalidOperationException("Already started");
             }
@@ -50,23 +52,33 @@ namespace RealTimeIo.Sources
                 while(!token.IsCancellationRequested)
                 {
                     //todo: new byte[] заменить на ArrayPool<byte>
-                    var buffer = new byte[_bufferSize];
-                    int read = await _stream.ReadAsync(buffer.AsMemory(0, _bufferSize), token);
-
-                    if (read <= 0)
-                        break;
-
-                    if(read < _bufferSize)
+                    var buffer = ArrayPool<byte>.Shared.Rent(_bufferSize);
+                    try
                     {
-                        var trimed = new byte[read];
-                        Array.Copy(buffer, trimed, read);
-                        buffer = trimed;
+                        int read = await _stream.ReadAsync(buffer.AsMemory(0, _bufferSize), token);
+
+                        if(read <= 0)
+                            break;
+
+                        if(read < _bufferSize)
+                        {
+                            ArrayPool<byte>.Shared.Return(buffer);
+
+                            buffer = new byte[read];
+                            int newRead = await _stream.ReadAsync(buffer, 0, read, token);
+                            if(newRead != read)
+                                throw new IOException("Unexpected end of stream");
+                        }
+                        if (!await _channel.Writer.WaitToWriteAsync(token))
+                            break;
+
+                        await _channel.Writer.WriteAsync(buffer,token);
                     }
-
-                    if (!await _channel.Writer.WaitToWriteAsync(token))
-                        break;
-
-                    await _channel.Writer.WriteAsync(buffer, token);
+                    catch
+                    {
+                        ArrayPool<byte>.Shared.Return(buffer);
+                        throw;
+                    }
                 }
             }catch(OperationCanceledException)
             {
